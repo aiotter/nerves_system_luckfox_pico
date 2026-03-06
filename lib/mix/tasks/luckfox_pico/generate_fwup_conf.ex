@@ -1,0 +1,132 @@
+defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
+  use Mix.Task
+
+  @shortdoc "Generates .nerves/fwup.conf from BoardConfig.mk"
+
+  @rootfs_count_blk 256 * 1024 * 2
+  @app_count_blk 512 * 1024 * 2
+
+  @impl Mix.Task
+  def run(_args) do
+    root = File.cwd!()
+    board_config_path = Path.join(root, ".nerves/BoardConfig.mk")
+    template_path = Path.join(root, "fwup.conf.eex")
+    output_path = Path.join(root, ".nerves/fwup.conf")
+
+    unless File.exists?(board_config_path) do
+      Mix.raise("BoardConfig not found: #{board_config_path}")
+    end
+
+    board_config = File.read!(board_config_path)
+    boot_medium = extract_export!(board_config, "RK_BOOT_MEDIUM")
+
+    if boot_medium != "sd_card" do
+      Mix.raise("Only sd_card board configs are supported. RK_BOOT_MEDIUM=#{boot_medium}")
+    end
+
+    partition_cmd = extract_export!(board_config, "RK_PARTITION_CMD_IN_ENV")
+    parts = parse_partition_cmd!(partition_cmd)
+    env_part = get_partition!(parts, "env")
+    idblock_part = get_partition!(parts, "idblock")
+    uboot_part = get_partition!(parts, "uboot")
+    boot_part = get_partition!(parts, "boot")
+    rootfs_part = get_partition!(parts, "rootfs")
+
+    env_offset_blk = kib_to_blk(elem(env_part, 0))
+    env_count_blk = kib_to_blk(elem(env_part, 1))
+    idblock_offset_blk = kib_to_blk(elem(idblock_part, 0))
+    uboot_offset_blk = kib_to_blk(elem(uboot_part, 0))
+    boot_offset_blk = kib_to_blk(elem(boot_part, 0))
+    boot_count_blk = kib_to_blk(elem(boot_part, 1))
+    rootfs_offset_blk = kib_to_blk(elem(rootfs_part, 0))
+    app_offset_blk = rootfs_offset_blk + @rootfs_count_blk
+
+    assigns = [
+      board_config_path: board_config_path,
+      board_name: Path.basename(board_config_path, ".mk"),
+      env_offset_blk: env_offset_blk,
+      env_count_blk: env_count_blk,
+      idblock_offset_blk: idblock_offset_blk,
+      uboot_offset_blk: uboot_offset_blk,
+      boot_offset_blk: boot_offset_blk,
+      boot_count_blk: boot_count_blk,
+      rootfs_offset_blk: rootfs_offset_blk,
+      rootfs_count_blk: @rootfs_count_blk,
+      app_offset_blk: app_offset_blk,
+      app_count_blk: @app_count_blk
+    ]
+
+    rendered = EEx.eval_file(template_path, assigns)
+    File.mkdir_p!(Path.dirname(output_path))
+    File.write!(output_path, rendered)
+  end
+
+  defp parse_partition_cmd!(partition_cmd) do
+    partition_cmd
+    |> String.split(",", trim: true)
+    |> Enum.reduce({%{}, 0}, fn entry, {acc, cursor_kib} ->
+      case Regex.run(~r/^([^()]+)\(([^)]+)\)$/, String.trim(entry), capture: :all_but_first) do
+        [definition, name] ->
+          definition = String.trim(definition)
+          name = String.trim(name)
+
+          {size_kib, offset_kib} =
+            case String.split(definition, "@", parts: 2) do
+              [size, offset] ->
+                {to_kib!(size), to_kib!(offset)}
+
+              [size] ->
+                {to_kib!(size), cursor_kib}
+            end
+
+          {Map.put(acc, name, {offset_kib, size_kib}), offset_kib + size_kib}
+
+        _ ->
+          Mix.raise("Failed to parse partition entry: #{entry}")
+      end
+    end)
+    |> elem(0)
+  end
+
+  defp get_partition!(parts, name) do
+    case Map.fetch(parts, name) do
+      {:ok, part} -> part
+      :error -> Mix.raise("Required partition not found in BoardConfig: #{name}")
+    end
+  end
+
+  defp to_kib!(value) do
+    case Regex.run(~r/^\s*(\d+)\s*([KkMmGg]?)\s*$/, String.trim(value), capture: :all_but_first) do
+      [n, ""] -> String.to_integer(n)
+      [n, "K"] -> String.to_integer(n)
+      [n, "k"] -> String.to_integer(n)
+      [n, "M"] -> String.to_integer(n) * 1024
+      [n, "m"] -> String.to_integer(n) * 1024
+      [n, "G"] -> String.to_integer(n) * 1024 * 1024
+      [n, "g"] -> String.to_integer(n) * 1024 * 1024
+      _ -> Mix.raise("Unsupported partition size unit: #{value}")
+    end
+  end
+
+  defp kib_to_blk(kib), do: kib * 2
+
+  defp extract_export!(board_config, key) do
+    case Regex.run(~r/^\s*export\s+#{key}=(.+)\s*$/m, board_config, capture: :all_but_first) do
+      [value] -> strip_shell_quotes(String.trim(value))
+      _ -> Mix.raise("Missing export #{key} in BoardConfig")
+    end
+  end
+
+  defp strip_shell_quotes(value) do
+    cond do
+      String.length(value) >= 2 and String.starts_with?(value, "\"") and String.ends_with?(value, "\"") ->
+        String.slice(value, 1..-2//1)
+
+      String.length(value) >= 2 and String.starts_with?(value, "'") and String.ends_with?(value, "'") ->
+        String.slice(value, 1..-2//1)
+
+      true ->
+        value
+    end
+  end
+end

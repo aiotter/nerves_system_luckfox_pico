@@ -13,14 +13,15 @@ defmodule NervesSystemLuckfoxPico.MixProject do
       app: @app,
       version: @version,
       elixir: "~> 1.17",
-      compilers: Mix.compilers() ++ [:nerves_package],
+      compilers: Mix.compilers() ++ [:luckfox_pico, :nerves_package],
       nerves_package: nerves_package(),
       # description: description(),
       # package: package(),
       deps: deps(),
+      luckfox_pico_board: "RV1103_Luckfox_Pico_Mini",
+      luckfox_pico_sdk_ref: "994243753789e1b40ef91122e8b3688aae8f01b8",
       aliases: [
         loadconfig: [&bootstrap/1]
-        # generate_fwup_conf: &generate_fwup_conf/1
       ]
       # docs: docs()
     ]
@@ -46,6 +47,7 @@ defmodule NervesSystemLuckfoxPico.MixProject do
       artifact_sites: [
         {:github_releases, "#{@github_organization}/#{@app}"}
       ],
+      build_runner: Nerves.Artifact.BuildRunners.Docker,
       build_runner_opts: build_runner_opts(),
       platform: Nerves.System.BR,
       platform_config: [
@@ -109,16 +111,18 @@ defmodule NervesSystemLuckfoxPico.MixProject do
     [
       "fwup_include",
       "rootfs_overlay",
+      "Dockerfile",
       "CHANGELOG.md",
       "cmdline-a.txt",
       "cmdline-b.txt",
       "config.txt",
       "fwup-ops.conf",
       "fwup.conf.eex",
-      "luckfox-board.mk",
-      "luckfox-sdk.mk",
       "LICENSES/*",
       "linux-5.10.defconfig",
+      "lib/mix/tasks/luckfox_pico/docker.ex",
+      "lib/mix/tasks/compile.luckfox_pico.ex",
+      "lib/mix/tasks/luckfox_pico/generate_fwup_conf.ex",
       "mix.exs",
       "nerves_defconfig",
       "post-build.sh",
@@ -126,7 +130,6 @@ defmodule NervesSystemLuckfoxPico.MixProject do
       "ramoops-overlay.dts",
       "README.md",
       "REUSE.toml",
-      "scripts/gen-fwup-conf.sh",
       "VERSION"
     ]
   end
@@ -150,5 +153,4 @@ defmodule NervesSystemLuckfoxPico.MixProject do
       System.put_env("MIX_TARGET", "target")
     end
   end
-
 end

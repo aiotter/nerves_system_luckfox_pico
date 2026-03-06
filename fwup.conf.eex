@@ -1,11 +1,11 @@
 # Auto-generated from:
-#   @@BOARD_CONFIG_PATH@@
+#   <%= board_config_path %>
 # Do not edit generated output directly. Update board selection and regenerate.
 
 require-fwup-version = "1.0.0"
 
 define(NERVES_FW_PRODUCT, "Nerves Firmware")
-define(NERVES_FW_DESCRIPTION, "Luckfox (@@BOARD_NAME@@)")
+define(NERVES_FW_DESCRIPTION, "Luckfox (<%= board_name %>)")
 define(NERVES_FW_VERSION, "${NERVES_SDK_VERSION}")
 define(NERVES_FW_PLATFORM, "luckfox_pico_sd")
 define(NERVES_FW_ARCHITECTURE, "arm")
@@ -22,17 +22,17 @@ define(ROOTFS, "${NERVES_SYSTEM}/images/rootfs.squashfs")
 define(IDBLOCK, "${NERVES_SYSTEM}/images/idblock.img")
 define(UBOOT, "${NERVES_SYSTEM}/images/uboot.img")
 
-define(UBOOT_ENV_OFFSET, @@ENV_OFFSET_BLK@@)
-define(UBOOT_ENV_COUNT, @@ENV_COUNT_BLK@@)
-define(IDBLOCK_OFFSET, @@IDBLOCK_OFFSET_BLK@@)
-define(UBOOT_OFFSET, @@UBOOT_OFFSET_BLK@@)
+define(UBOOT_ENV_OFFSET, <%= env_offset_blk %>)
+define(UBOOT_ENV_COUNT, <%= env_count_blk %>)
+define(IDBLOCK_OFFSET, <%= idblock_offset_blk %>)
+define(UBOOT_OFFSET, <%= uboot_offset_blk %>)
 
-define(BOOT_PART_OFFSET, @@BOOT_OFFSET_BLK@@)
-define(BOOT_PART_COUNT, @@BOOT_COUNT_BLK@@)
-define(ROOTFS_PART_OFFSET, @@ROOTFS_OFFSET_BLK@@)
-define(ROOTFS_PART_COUNT, @@ROOTFS_COUNT_BLK@@)
-define(APP_PART_OFFSET, @@APP_OFFSET_BLK@@)
-define(APP_PART_COUNT, @@APP_COUNT_BLK@@)
+define(BOOT_PART_OFFSET, <%= boot_offset_blk %>)
+define(BOOT_PART_COUNT, <%= boot_count_blk %>)
+define(ROOTFS_PART_OFFSET, <%= rootfs_offset_blk %>)
+define(ROOTFS_PART_COUNT, <%= rootfs_count_blk %>)
+define(APP_PART_OFFSET, <%= app_offset_blk %>)
+define(APP_PART_COUNT, <%= app_count_blk %>)
 
 meta-product = ${NERVES_FW_PRODUCT}
 meta-description = ${NERVES_FW_DESCRIPTION}

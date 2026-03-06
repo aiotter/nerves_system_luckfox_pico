@@ -12,33 +12,37 @@ Nerves system for Luckfox Pico (RV1106).
 
 `task complete` writes Rockchip boot blobs (`idblock.img`, `uboot.img`) in addition to the Nerves partitions.
 
-During `post-build.sh`, it runs `luckfox-sdk.mk` to:
+`loadconfig` runs these steps before the Buildroot build:
 
-1. Build `idblock.img` / `uboot.img` once when missing
-2. Generate `images/fwup.conf` from [fwup.conf.eex](fwup.conf.eex) using the selected BoardConfig (`RK_PARTITION_CMD_IN_ENV`)
+1. Build Docker image from [Dockerfile](Dockerfile) (`luckfoxtech/luckfox_pico` stage generates `idblock.img` / `uboot.img` / `BoardConfig.mk`)
+2. Copy `BoardConfig.mk` from that image to `.nerves/BoardConfig.mk`
+3. Generate `.nerves/fwup.conf` from [fwup.conf.eex](fwup.conf.eex) in Elixir
 
-The generated `images/fwup.conf` is used by `post-createfs.sh`.
+During `post-build.sh`, this repository copies prebuilt `idblock.img` / `uboot.img` to Buildroot `images/`.
+The generated `.nerves/fwup.conf` is consumed by `post-createfs.sh`.
 
-SDK lookup order:
+## Build Container
 
-1. Existing local SDK checkout (workspace nearby paths)
-2. Auto-cloned SDK in `/home/nerves/project/luckfox_pico_sdk` (inside Nerves build container)
+This system always uses Docker build_runner and the repository `Dockerfile`.
+The Dockerfile stages are:
 
-To pin the SDK commit hash, set `LUCKFOX_SDK_GIT_REF` in [luckfox-board.mk](luckfox-board.mk) or pass `SDK_GIT_REF=<commit>` to make.
+1. `luckfoxtech/luckfox_pico` for `idblock.img`/`uboot.img` build
+2. `ghcr.io/nerves-project/nerves_system_br` for the final Nerves build environment
 
 ## Switch Board Model
 
-Edit one line in [luckfox-board.mk](luckfox-board.mk):
+Set `LUCKFOX_BOARD_CONFIG_REL` before `mix firmware` (or change defaults in [mix.exs](mix.exs)):
 
-`LUCKFOX_BOARD_CONFIG_REL ?= project/cfg/BoardConfig_IPC/<your-board-config>.mk`
+`LUCKFOX_BOARD_CONFIG_REL=project/cfg/BoardConfig_IPC/<your-board-config>.mk`
 
 Example:
 
-`project/cfg/BoardConfig_IPC/BoardConfig-SD_CARD-Buildroot-RV1103_Luckfox_Pico_Mini-IPC.mk`
+`LUCKFOX_BOARD_CONFIG_REL=project/cfg/BoardConfig_IPC/BoardConfig-SD_CARD-Buildroot-RV1103_Luckfox_Pico_Mini-IPC.mk`
 
 Notes:
 
 - Only `sd_card` BoardConfig is supported by this Nerves system flow.
+- Rebuild happens automatically in `loadconfig` when `LUCKFOX_BOARD_CONFIG_REL` or `LUCKFOX_SDK_GIT_REF` changes.
 - `fwup.conf` is generated automatically from the selected BoardConfig, so partition offsets update with the model.
 
 ## Installation
