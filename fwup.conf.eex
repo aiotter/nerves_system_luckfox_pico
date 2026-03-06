@@ -1,0 +1,182 @@
+# Auto-generated from:
+#   @@BOARD_CONFIG_PATH@@
+# Do not edit generated output directly. Update board selection and regenerate.
+
+require-fwup-version = "1.0.0"
+
+define(NERVES_FW_PRODUCT, "Nerves Firmware")
+define(NERVES_FW_DESCRIPTION, "Luckfox (@@BOARD_NAME@@)")
+define(NERVES_FW_VERSION, "${NERVES_SDK_VERSION}")
+define(NERVES_FW_PLATFORM, "luckfox_pico_sd")
+define(NERVES_FW_ARCHITECTURE, "arm")
+define(NERVES_FW_AUTHOR, "nerves_system_luckfox_pico")
+
+define(NERVES_FW_DEVPATH, "/dev/mmcblk0")
+define(NERVES_FW_APPLICATION_PART0_DEVPATH, "/dev/mmcblk0p2")
+define(NERVES_FW_APPLICATION_PART0_FSTYPE, "squashfs")
+define(NERVES_FW_APPLICATION_PART0_TARGET, "/")
+define(NERVES_PROVISIONING, "${NERVES_SYSTEM}/images/fwup_include/provisioning.conf")
+
+define(KERNEL, "${NERVES_SYSTEM}/images/zImage")
+define(ROOTFS, "${NERVES_SYSTEM}/images/rootfs.squashfs")
+define(IDBLOCK, "${NERVES_SYSTEM}/images/idblock.img")
+define(UBOOT, "${NERVES_SYSTEM}/images/uboot.img")
+
+define(UBOOT_ENV_OFFSET, @@ENV_OFFSET_BLK@@)
+define(UBOOT_ENV_COUNT, @@ENV_COUNT_BLK@@)
+define(IDBLOCK_OFFSET, @@IDBLOCK_OFFSET_BLK@@)
+define(UBOOT_OFFSET, @@UBOOT_OFFSET_BLK@@)
+
+define(BOOT_PART_OFFSET, @@BOOT_OFFSET_BLK@@)
+define(BOOT_PART_COUNT, @@BOOT_COUNT_BLK@@)
+define(ROOTFS_PART_OFFSET, @@ROOTFS_OFFSET_BLK@@)
+define(ROOTFS_PART_COUNT, @@ROOTFS_COUNT_BLK@@)
+define(APP_PART_OFFSET, @@APP_OFFSET_BLK@@)
+define(APP_PART_COUNT, @@APP_COUNT_BLK@@)
+
+meta-product = ${NERVES_FW_PRODUCT}
+meta-description = ${NERVES_FW_DESCRIPTION}
+meta-version = ${NERVES_FW_VERSION}
+meta-platform = ${NERVES_FW_PLATFORM}
+meta-architecture = ${NERVES_FW_ARCHITECTURE}
+meta-author = ${NERVES_FW_AUTHOR}
+meta-vcs-identifier = ${NERVES_FW_VCS_IDENTIFIER}
+meta-misc = ${NERVES_FW_MISC}
+
+file-resource zImage {
+    host-path = "${KERNEL}"
+}
+
+file-resource idblock.img {
+    host-path = "${IDBLOCK}"
+}
+
+file-resource uboot.img {
+    host-path = "${UBOOT}"
+}
+
+file-resource extlinux.conf {
+    contents = "\
+default nerves\n\
+timeout 1\n\
+label nerves\n\
+    linux /zImage\n\
+    append root=/dev/mmcblk0p2 rootfstype=squashfs ro rootwait console=ttyS2,1500000n8\n\
+"
+}
+
+file-resource rootfs.squashfs {
+    host-path = "${ROOTFS}"
+    assert-size-lte = ${ROOTFS_PART_COUNT}
+}
+
+mbr mbr {
+    partition 0 {
+        block-offset = ${BOOT_PART_OFFSET}
+        block-count = ${BOOT_PART_COUNT}
+        type = 0xc
+        boot = true
+    }
+    partition 1 {
+        block-offset = ${ROOTFS_PART_OFFSET}
+        block-count = ${ROOTFS_PART_COUNT}
+        type = 0x83
+    }
+    partition 2 {
+        block-offset = ${APP_PART_OFFSET}
+        block-count = ${APP_PART_COUNT}
+        type = 0x83
+        expand = true
+    }
+}
+
+uboot-environment uboot-env {
+    block-offset = ${UBOOT_ENV_OFFSET}
+    block-count = ${UBOOT_ENV_COUNT}
+}
+
+task complete {
+    require-unmounted-destination = true
+
+    on-init {
+        raw_memset(0, ${BOOT_PART_OFFSET}, 0x00)
+        mbr_write(mbr)
+        fat_mkfs(${BOOT_PART_OFFSET}, ${BOOT_PART_COUNT})
+        fat_setlabel(${BOOT_PART_OFFSET}, "BOOT")
+        fat_mkdir(${BOOT_PART_OFFSET}, "extlinux")
+
+        uboot_clearenv(uboot-env)
+        include("${NERVES_PROVISIONING}")
+        uboot_setenv(uboot-env, "nerves_fw_active", "a")
+        uboot_setenv(uboot-env, "nerves_fw_devpath", ${NERVES_FW_DEVPATH})
+        uboot_setenv(uboot-env, "a.nerves_fw_application_part0_devpath", ${NERVES_FW_APPLICATION_PART0_DEVPATH})
+        uboot_setenv(uboot-env, "a.nerves_fw_application_part0_fstype", ${NERVES_FW_APPLICATION_PART0_FSTYPE})
+        uboot_setenv(uboot-env, "a.nerves_fw_application_part0_target", ${NERVES_FW_APPLICATION_PART0_TARGET})
+        uboot_setenv(uboot-env, "a.nerves_fw_product", ${NERVES_FW_PRODUCT})
+        uboot_setenv(uboot-env, "a.nerves_fw_description", ${NERVES_FW_DESCRIPTION})
+        uboot_setenv(uboot-env, "a.nerves_fw_version", ${NERVES_FW_VERSION})
+        uboot_setenv(uboot-env, "a.nerves_fw_platform", ${NERVES_FW_PLATFORM})
+        uboot_setenv(uboot-env, "a.nerves_fw_architecture", ${NERVES_FW_ARCHITECTURE})
+        uboot_setenv(uboot-env, "a.nerves_fw_author", ${NERVES_FW_AUTHOR})
+        uboot_setenv(uboot-env, "a.nerves_fw_vcs_identifier", ${NERVES_FW_VCS_IDENTIFIER})
+        uboot_setenv(uboot-env, "a.nerves_fw_misc", ${NERVES_FW_MISC})
+        uboot_setenv(uboot-env, "a.nerves_fw_uuid", "\${FWUP_META_UUID}")
+    }
+
+    on-resource idblock.img { raw_write(${IDBLOCK_OFFSET}) }
+    on-resource uboot.img { raw_write(${UBOOT_OFFSET}) }
+    on-resource zImage { fat_write(${BOOT_PART_OFFSET}, "zImage") }
+    on-resource extlinux.conf { fat_write(${BOOT_PART_OFFSET}, "extlinux/extlinux.conf") }
+    on-resource rootfs.squashfs { raw_write(${ROOTFS_PART_OFFSET}) }
+
+    on-finish {
+        raw_memset(${APP_PART_OFFSET}, 256, 0xff)
+    }
+}
+
+task upgrade {
+    require-uboot-variable(uboot-env, "a.nerves_fw_platform", "${NERVES_FW_PLATFORM}")
+    require-uboot-variable(uboot-env, "a.nerves_fw_architecture", "${NERVES_FW_ARCHITECTURE}")
+
+    on-resource rootfs.squashfs {
+        delta-source-raw-offset=${ROOTFS_PART_OFFSET}
+        delta-source-raw-count=${ROOTFS_PART_COUNT}
+        raw_write(${ROOTFS_PART_OFFSET})
+    }
+
+    on-finish {
+        uboot_setenv(uboot-env, "a.nerves_fw_application_part0_devpath", ${NERVES_FW_APPLICATION_PART0_DEVPATH})
+        uboot_setenv(uboot-env, "a.nerves_fw_application_part0_fstype", ${NERVES_FW_APPLICATION_PART0_FSTYPE})
+        uboot_setenv(uboot-env, "a.nerves_fw_application_part0_target", ${NERVES_FW_APPLICATION_PART0_TARGET})
+        uboot_setenv(uboot-env, "a.nerves_fw_product", ${NERVES_FW_PRODUCT})
+        uboot_setenv(uboot-env, "a.nerves_fw_description", ${NERVES_FW_DESCRIPTION})
+        uboot_setenv(uboot-env, "a.nerves_fw_version", ${NERVES_FW_VERSION})
+        uboot_setenv(uboot-env, "a.nerves_fw_platform", ${NERVES_FW_PLATFORM})
+        uboot_setenv(uboot-env, "a.nerves_fw_architecture", ${NERVES_FW_ARCHITECTURE})
+        uboot_setenv(uboot-env, "a.nerves_fw_author", ${NERVES_FW_AUTHOR})
+        uboot_setenv(uboot-env, "a.nerves_fw_vcs_identifier", ${NERVES_FW_VCS_IDENTIFIER})
+        uboot_setenv(uboot-env, "a.nerves_fw_misc", ${NERVES_FW_MISC})
+        uboot_setenv(uboot-env, "a.nerves_fw_uuid", "\${FWUP_META_UUID}")
+    }
+}
+
+task upgrade.wrongplatform {
+    on-init {
+        error("Expecting platform=${NERVES_FW_PLATFORM} and architecture=${NERVES_FW_ARCHITECTURE}")
+    }
+}
+
+task provision {
+    require-uboot-variable(uboot-env, "a.nerves_fw_platform", "${NERVES_FW_PLATFORM}")
+    require-uboot-variable(uboot-env, "a.nerves_fw_architecture", "${NERVES_FW_ARCHITECTURE}")
+
+    on-init {
+        include("${NERVES_PROVISIONING}")
+    }
+}
+
+task provision.wrongplatform {
+    on-init {
+        error("Expecting platform=${NERVES_FW_PLATFORM} and architecture=${NERVES_FW_ARCHITECTURE}")
+    }
+}
