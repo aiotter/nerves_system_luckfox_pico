@@ -36,7 +36,7 @@ Example:
 
 Here, "SDK" means the official Luckfox build tree:
 [LuckfoxTECH/luckfox-pico](https://github.com/LuckfoxTECH/luckfox-pico)
-(`LUCKFOX_SDK_GIT_URL` / `LUCKFOX_SDK_GIT_REF` in [Dockerfile](Dockerfile)).
+(`LUCKFOX_SDK_GIT_URL` / `LUCKFOX_SDK_GIT_REF` in [docker/Dockerfile](docker/Dockerfile)).
 
 Rockchip boot blobs (`idblock.img`, `uboot.img`) are written to raw offsets on the
 microSD device (not to a filesystem path). In this system, that happens on
@@ -44,7 +44,7 @@ initial flash task `complete` (for example `mix firmware.burn --task complete`).
 
 `loadconfig` runs these steps before the Buildroot build:
 
-1. Build Docker image from [Dockerfile](Dockerfile) (`luckfoxtech/luckfox_pico` stage runs SDK `build.sh uboot` and `build.sh kernel`, then exports `idblock.img` / `uboot.img` / `zImage` / `kernel.dtb` / `userdata.img` / `BoardConfig.mk`)
+1. Build Docker image from [docker/Dockerfile](docker/Dockerfile) (`luckfoxtech/luckfox_pico` stage runs SDK `build.sh uboot` and `build.sh kernel`, then exports `idblock.img` / `uboot.img` / `zImage` / `kernel.dtb` / `userdata.img` / `BoardConfig.mk`)
 2. Copy `BoardConfig.mk` from that image to `.nerves/BoardConfig.mk`
 3. Generate `.nerves/fwup.conf` and `.nerves/fw_env.config` in Elixir
 

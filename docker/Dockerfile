@@ -1,8 +1,8 @@
 FROM luckfoxtech/luckfox_pico:1.0
 
 ARG LUCKFOX_SDK_GIT_URL=https://github.com/LuckfoxTECH/luckfox-pico.git
-ARG LUCKFOX_SDK_GIT_REF=994243753789e1b40ef91122e8b3688aae8f01b8
-ARG LUCKFOX_BOARD=RV1103_Luckfox_Pico_Mini
+ARG LUCKFOX_SDK_GIT_REF
+ARG LUCKFOX_BOARD
 
 WORKDIR /home
 
@@ -89,4 +89,6 @@ RUN bash -eux <<'EOF'
   cp "$KERNEL_DTB_SRC" /out/kernel.dtb
   cp output/image/userdata.img /out/userdata.img
   cp .BoardConfig.mk /out/BoardConfig.mk
+  tar -C /out -cf /out.tar \
+    idblock.img uboot.img zImage kernel.dtb userdata.img BoardConfig.mk
 EOF

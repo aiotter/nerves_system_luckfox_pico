@@ -6,7 +6,7 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConfigs do
   @impl Mix.Task
   def run(_args) do
     root = File.cwd!()
-    board_config_path = Path.join(root, ".nerves/BoardConfig.mk")
+    board_config_path = Path.join(root, ".nerves/luckfox_prebuilt/BoardConfig.mk")
     template_path = Path.join(root, "fwup.conf.eex")
     output_path = Path.join(root, ".nerves/fwup.conf")
     fw_env_config_path = Path.join(root, ".nerves/fw_env.config")
