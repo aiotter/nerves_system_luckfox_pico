@@ -9,6 +9,7 @@ PREBUILT_ZIMAGE="$PREBUILT_ROOT/zImage"
 PREBUILT_KERNEL_DTB="$PREBUILT_ROOT/kernel.dtb"
 PREBUILT_USERDATA_IMG="$PREBUILT_ROOT/userdata.img"
 NERVES_BR_PATCH="$NERVES_DEFCONFIG_DIR/patches/nerves_system_br/0001-merge-squashfs-default-to-xz.patch"
+NERVES_FW_ENV_CONFIG="$NERVES_DEFCONFIG_DIR/.nerves/fw_env.config"
 
 require_prebuilt() {
     if [ ! -f "$1" ]; then
@@ -41,8 +42,16 @@ require_prebuilt "$PREBUILT_ZIMAGE"
 require_prebuilt "$PREBUILT_KERNEL_DTB"
 require_prebuilt "$PREBUILT_USERDATA_IMG"
 
+if [ ! -f "$NERVES_FW_ENV_CONFIG" ]; then
+    echo "ERROR: missing generated fw_env.config: $NERVES_FW_ENV_CONFIG"
+    exit 1
+fi
+
 cp -f "$PREBUILT_IDBLOCK_IMG" "$BINARIES_DIR/idblock.img"
 cp -f "$PREBUILT_UBOOT_IMG" "$BINARIES_DIR/uboot.img"
 cp -f "$PREBUILT_ZIMAGE" "$BINARIES_DIR/zImage"
 cp -f "$PREBUILT_KERNEL_DTB" "$BINARIES_DIR/kernel.dtb"
 cp -f "$PREBUILT_USERDATA_IMG" "$BINARIES_DIR/userdata.img"
+
+mkdir -p "$TARGET_DIR/etc"
+cp -f "$NERVES_FW_ENV_CONFIG" "$TARGET_DIR/etc/fw_env.config"

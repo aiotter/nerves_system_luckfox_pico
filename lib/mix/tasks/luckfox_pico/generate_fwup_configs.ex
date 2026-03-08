@@ -1,7 +1,7 @@
-defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
+defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConfigs do
   use Mix.Task
 
-  @shortdoc "Generates .nerves/fwup.conf from BoardConfig.mk"
+  @shortdoc "Generates .nerves/fwup.conf and .nerves/fw_env.config from BoardConfig.mk"
 
   @impl Mix.Task
   def run(_args) do
@@ -9,6 +9,7 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
     board_config_path = Path.join(root, ".nerves/BoardConfig.mk")
     template_path = Path.join(root, "fwup.conf.eex")
     output_path = Path.join(root, ".nerves/fwup.conf")
+    fw_env_config_path = Path.join(root, ".nerves/fw_env.config")
 
     unless File.exists?(board_config_path) do
       Mix.raise("BoardConfig not found: #{board_config_path}")
@@ -76,6 +77,22 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
     rendered = EEx.eval_file(template_path, assigns)
     File.mkdir_p!(Path.dirname(output_path))
     File.write!(output_path, rendered)
+
+    fw_env_config =
+      render_fw_env_config(board_config_path, fw_devpath, kib_to_bytes(elem(env_part, 0)), kib_to_bytes(elem(env_part, 1)))
+
+    File.mkdir_p!(Path.dirname(fw_env_config_path))
+    File.write!(fw_env_config_path, fw_env_config)
+  end
+
+  defp render_fw_env_config(board_config_path, fw_devpath, env_offset_bytes, env_size_bytes) do
+    """
+    # Auto-generated from:
+    #   #{board_config_path}
+    # Do not edit generated output directly. Update board selection and regenerate.
+
+    #{fw_devpath} 0x#{Integer.to_string(env_offset_bytes, 16)} 0x#{Integer.to_string(env_size_bytes, 16)}
+    """
   end
 
   defp parse_partition_cmd!(partition_cmd) do
@@ -127,6 +144,7 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
   end
 
   defp kib_to_blk(kib), do: kib * 2
+  defp kib_to_bytes(kib), do: kib * 1024
 
   defp extract_export!(board_config, key) do
     case Regex.run(~r/^\s*export\s+#{key}=(.+)\s*$/m, board_config, capture: :all_but_first) do
