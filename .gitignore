@@ -17,3 +17,4 @@ erl_crash.dump
 # Packages
 *.ez
 nerves_system_luckfox_pico*.tar
+nerves_system_luckfox_pico*.tar.gz
