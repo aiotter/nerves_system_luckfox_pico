@@ -7,12 +7,9 @@
   ],
   "shell": {
     "init_hook": [
-      "echo 'Welcome to devbox!' > /dev/null"
-    ],
-    "scripts": {
-      "test": [
-        "echo \"Error: no test specified\" && exit 1"
-      ]
-    }
-  }
+      "ls \"$MIX_HOME/archives\"/hex-* >/dev/null 2>&1 || mix local.hex --force",
+      "ls \"$MIX_HOME/archives\"/nerves_bootstrap-*  >/dev/null 2>&1 || mix archive.install hex nerves_bootstrap --force"
+    ]
+  },
+  "include": ["plugin:elixir"]
 }
