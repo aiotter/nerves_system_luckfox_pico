@@ -40,6 +40,9 @@ jobs:
       - name: Install Devbox
         uses: jetify-com/devbox-install-action@v0.13.0
 
+      - name: Ensure SSH directory exists for Docker bind mount
+        run: mkdir -p ~/.ssh
+
       - name: Fetch dependencies
         run: devbox run -- mix deps.get
 
