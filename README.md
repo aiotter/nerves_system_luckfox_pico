@@ -13,6 +13,15 @@ Nerves system for Luckfox Pico Mini (RV1103).
 
 - Docker is required (SDK prebuilt image generation/extraction depends on Docker).
 
+## Board Support
+
+- [x] LuckFox Pico Mini
+
+## Implemented and Upcoming Features
+
+- [x] single-slot OTA updates (`task upgrade` writes the active rootfs partition directly)
+- [ ] A/B system updates (dual rootfs slots so updates can fall back to the previous slot on failure)
+
 ## Switch Board Model
 
 Set `luckfox_pico_board` in [mix.exs](mix.exs):
