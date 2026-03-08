@@ -1,0 +1,20 @@
+diff --git a/scripts/merge-squashfs b/scripts/merge-squashfs
+index a6a8f70..1b8d03d 100755
+--- a/scripts/merge-squashfs
++++ b/scripts/merge-squashfs
+@@ -200,7 +200,14 @@ awk '!x[$1]++' pseudofile.in > pseudofile
+ 
+ unsquashfs -f "$input_squashfs" >/dev/null
+ cp -Rf "$overlay_dir/." "$workdir/squashfs-root"
+-mksquashfs squashfs-root "$output_squashfs" -pf pseudofile -sort "$squashfs_priorities" -noappend -no-recovery -no-progress $NERVES_MKSQUASHFS_FLAGS
++
++MKSQUASHFS_FLAGS="${NERVES_MKSQUASHFS_FLAGS}"
++case " ${MKSQUASHFS_FLAGS} " in
++    *" -comp "*) ;;
++    *) MKSQUASHFS_FLAGS="${MKSQUASHFS_FLAGS} -comp xz" ;;
++esac
++
++mksquashfs squashfs-root "$output_squashfs" -pf pseudofile -sort "$squashfs_priorities" -noappend -no-recovery -no-progress $MKSQUASHFS_FLAGS
+ 
+ # cleanup
+ popd >/dev/null

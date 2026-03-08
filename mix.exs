@@ -2,7 +2,7 @@ defmodule NervesSystemLuckfoxPico.MixProject do
   use Mix.Project
 
   @github_organization "aiotter"
-  @app :nerves_system_luckfox_pico
+  @app :nerves_system_luckfox_pico_mini
   @source_url "https://github.com/#{@github_organization}/#{@app}"
   @version Path.join(__DIR__, "VERSION")
            |> File.read!()
@@ -15,15 +15,15 @@ defmodule NervesSystemLuckfoxPico.MixProject do
       elixir: "~> 1.17",
       compilers: Mix.compilers() ++ [:luckfox_pico, :nerves_package],
       nerves_package: nerves_package(),
-      # description: description(),
-      # package: package(),
+      description: description(),
+      package: package(),
       deps: deps(),
       luckfox_pico_board: "RV1103_Luckfox_Pico_Mini",
       luckfox_pico_sdk_ref: "994243753789e1b40ef91122e8b3688aae8f01b8",
       aliases: [
         loadconfig: [&bootstrap/1]
-      ]
-      # docs: docs()
+      ],
+      docs: docs()
     ]
   end
 
@@ -58,12 +58,10 @@ defmodule NervesSystemLuckfoxPico.MixProject do
       # llvm-based tooling that may need more precise processor information.
       env: [
         {"TARGET_ARCH", "arm"},
-        # {"TARGET_CPU", "arm1176jzf_s"},
-        {"TARGET_CPU", "rv1103"},
+        {"TARGET_CPU", "cortex_a7"},
         {"TARGET_OS", "linux"},
         {"TARGET_ABI", "gnueabihf"}
-        # {"TARGET_GCC_FLAGS",
-        #  "-mabi=aapcs-linux -mfpu=vfp -marm -fstack-protector-strong -mfloat-abi=hard -mcpu=arm1176jzf-s -fPIE -pie -Wl,-z,now -Wl,-z,relro"}
+        # {"TARGET_GCC_FLAGS", "-mcpu=cortex-a7 -marm -mfloat-abi=hard"}
       ],
       checksum: package_files()
     ]
@@ -101,35 +99,27 @@ defmodule NervesSystemLuckfoxPico.MixProject do
       licenses: ["GPL-2.0-only", "GPL-2.0-or-later"],
       links: %{
         "GitHub" => @source_url
-        # "REUSE Compliance" =>
-        #   "https://api.reuse.software/info/github.com/#{@github_organization}/#{@app}"
       }
     ]
   end
 
   defp package_files do
     [
-      "fwup_include",
-      "rootfs_overlay",
-      "Dockerfile",
-      "CHANGELOG.md",
-      "cmdline-a.txt",
-      "cmdline-b.txt",
-      "config.txt",
-      "fwup-ops.conf",
+      "busybox-luckfox.fragment",
+      "Config.in",
+      "external.mk",
       "fwup.conf.eex",
-      "LICENSES/*",
-      "linux-5.10.defconfig",
-      "lib/mix/tasks/luckfox_pico/docker.ex",
-      "lib/mix/tasks/compile.luckfox_pico.ex",
-      "lib/mix/tasks/luckfox_pico/generate_fwup_conf.ex",
+      "fwup_include",
+      "Dockerfile",
+      "docker",
+      "lib",
       "mix.exs",
       "nerves_defconfig",
+      "patches",
       "post-build.sh",
       "post-createfs.sh",
-      "ramoops-overlay.dts",
       "README.md",
-      "REUSE.toml",
+      "rootfs_overlay",
       "VERSION"
     ]
   end

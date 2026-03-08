@@ -11,14 +11,19 @@ define(NERVES_FW_PLATFORM, "luckfox_pico_sd")
 define(NERVES_FW_ARCHITECTURE, "arm")
 define(NERVES_FW_AUTHOR, "nerves_system_luckfox_pico")
 
-define(NERVES_FW_DEVPATH, "/dev/mmcblk0")
-define(NERVES_FW_APPLICATION_PART0_DEVPATH, "/dev/mmcblk0p2")
-define(NERVES_FW_APPLICATION_PART0_FSTYPE, "squashfs")
-define(NERVES_FW_APPLICATION_PART0_TARGET, "/")
+define(NERVES_FW_DEVPATH, "<%= fw_devpath %>")
+define(NERVES_FW_APPLICATION_PART0_DEVPATH, "<%= userdata_devpath %>")
+define(NERVES_FW_APPLICATION_PART0_FSTYPE, "ext4")
+define(NERVES_FW_APPLICATION_PART0_TARGET, "/root")
 define(NERVES_PROVISIONING, "${NERVES_SYSTEM}/images/fwup_include/provisioning.conf")
+define(BLKDEVPARTS, "<%= blkdevparts %>")
+define(BOOTARGS, "blkdevparts=${BLKDEVPARTS} root=<%= rootfs_devpath %> rootfstype=squashfs ro rootwait cma=8M console=ttyS2,1500000n8")
+define(BOOTCMD, "sysboot mmc 1:<%= boot_partnum %> any \\${scriptaddr} /extlinux/extlinux.conf")
 
 define(KERNEL, "${NERVES_SYSTEM}/images/zImage")
+define(KERNEL_DTB, "${NERVES_SYSTEM}/images/kernel.dtb")
 define(ROOTFS, "${NERVES_SYSTEM}/images/rootfs.squashfs")
+define(USERDATA, "${NERVES_SYSTEM}/images/userdata.img")
 define(IDBLOCK, "${NERVES_SYSTEM}/images/idblock.img")
 define(UBOOT, "${NERVES_SYSTEM}/images/uboot.img")
 
@@ -29,10 +34,12 @@ define(UBOOT_OFFSET, <%= uboot_offset_blk %>)
 
 define(BOOT_PART_OFFSET, <%= boot_offset_blk %>)
 define(BOOT_PART_COUNT, <%= boot_count_blk %>)
+define(OEM_PART_OFFSET, <%= oem_offset_blk %>)
+define(OEM_PART_COUNT, <%= oem_count_blk %>)
+define(USERDATA_PART_OFFSET, <%= userdata_offset_blk %>)
+define(USERDATA_PART_COUNT, <%= userdata_count_blk %>)
 define(ROOTFS_PART_OFFSET, <%= rootfs_offset_blk %>)
 define(ROOTFS_PART_COUNT, <%= rootfs_count_blk %>)
-define(APP_PART_OFFSET, <%= app_offset_blk %>)
-define(APP_PART_COUNT, <%= app_count_blk %>)
 
 meta-product = ${NERVES_FW_PRODUCT}
 meta-description = ${NERVES_FW_DESCRIPTION}
@@ -45,6 +52,10 @@ meta-misc = ${NERVES_FW_MISC}
 
 file-resource zImage {
     host-path = "${KERNEL}"
+}
+
+file-resource kernel.dtb {
+    host-path = "${KERNEL_DTB}"
 }
 
 file-resource idblock.img {
@@ -61,13 +72,18 @@ default nerves\n\
 timeout 1\n\
 label nerves\n\
     linux /zImage\n\
-    append root=/dev/mmcblk0p2 rootfstype=squashfs ro rootwait console=ttyS2,1500000n8\n\
+    devicetree /kernel.dtb\n\
+    append blkdevparts=<%= blkdevparts %> root=<%= rootfs_devpath %> rootfstype=squashfs ro rootwait cma=8M console=ttyS2,1500000n8\n\
 "
 }
 
 file-resource rootfs.squashfs {
     host-path = "${ROOTFS}"
     assert-size-lte = ${ROOTFS_PART_COUNT}
+}
+
+file-resource userdata.img {
+    host-path = "${USERDATA}"
 }
 
 mbr mbr {
@@ -78,15 +94,19 @@ mbr mbr {
         boot = true
     }
     partition 1 {
-        block-offset = ${ROOTFS_PART_OFFSET}
-        block-count = ${ROOTFS_PART_COUNT}
+        block-offset = ${OEM_PART_OFFSET}
+        block-count = ${OEM_PART_COUNT}
         type = 0x83
     }
     partition 2 {
-        block-offset = ${APP_PART_OFFSET}
-        block-count = ${APP_PART_COUNT}
+        block-offset = ${USERDATA_PART_OFFSET}
+        block-count = ${USERDATA_PART_COUNT}
         type = 0x83
-        expand = true
+    }
+    partition 3 {
+        block-offset = ${ROOTFS_PART_OFFSET}
+        block-count = ${ROOTFS_PART_COUNT}
+        type = 0x83
     }
 }
 
@@ -101,12 +121,16 @@ task complete {
     on-init {
         raw_memset(0, ${BOOT_PART_OFFSET}, 0x00)
         mbr_write(mbr)
+        raw_memset(${USERDATA_PART_OFFSET}, 256, 0xff)
         fat_mkfs(${BOOT_PART_OFFSET}, ${BOOT_PART_COUNT})
         fat_setlabel(${BOOT_PART_OFFSET}, "BOOT")
         fat_mkdir(${BOOT_PART_OFFSET}, "extlinux")
 
         uboot_clearenv(uboot-env)
         include("${NERVES_PROVISIONING}")
+        uboot_setenv(uboot-env, "blkdevparts", ${BLKDEVPARTS})
+        uboot_setenv(uboot-env, "bootargs", ${BOOTARGS})
+        uboot_setenv(uboot-env, "bootcmd", ${BOOTCMD})
         uboot_setenv(uboot-env, "nerves_fw_active", "a")
         uboot_setenv(uboot-env, "nerves_fw_devpath", ${NERVES_FW_DEVPATH})
         uboot_setenv(uboot-env, "a.nerves_fw_application_part0_devpath", ${NERVES_FW_APPLICATION_PART0_DEVPATH})
@@ -126,12 +150,11 @@ task complete {
     on-resource idblock.img { raw_write(${IDBLOCK_OFFSET}) }
     on-resource uboot.img { raw_write(${UBOOT_OFFSET}) }
     on-resource zImage { fat_write(${BOOT_PART_OFFSET}, "zImage") }
+    on-resource kernel.dtb { fat_write(${BOOT_PART_OFFSET}, "kernel.dtb") }
     on-resource extlinux.conf { fat_write(${BOOT_PART_OFFSET}, "extlinux/extlinux.conf") }
+    on-resource userdata.img { raw_write(${USERDATA_PART_OFFSET}) }
     on-resource rootfs.squashfs { raw_write(${ROOTFS_PART_OFFSET}) }
 
-    on-finish {
-        raw_memset(${APP_PART_OFFSET}, 256, 0xff)
-    }
 }
 
 task upgrade {
@@ -145,6 +168,9 @@ task upgrade {
     }
 
     on-finish {
+        uboot_setenv(uboot-env, "blkdevparts", ${BLKDEVPARTS})
+        uboot_setenv(uboot-env, "bootargs", ${BOOTARGS})
+        uboot_setenv(uboot-env, "bootcmd", ${BOOTCMD})
         uboot_setenv(uboot-env, "a.nerves_fw_application_part0_devpath", ${NERVES_FW_APPLICATION_PART0_DEVPATH})
         uboot_setenv(uboot-env, "a.nerves_fw_application_part0_fstype", ${NERVES_FW_APPLICATION_PART0_FSTYPE})
         uboot_setenv(uboot-env, "a.nerves_fw_application_part0_target", ${NERVES_FW_APPLICATION_PART0_TARGET})

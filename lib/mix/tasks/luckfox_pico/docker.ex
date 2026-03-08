@@ -58,6 +58,24 @@ defmodule Mix.Tasks.LuckfoxPico.Docker do
         Path.join(prebuilt_out, "uboot.img")
       ])
 
+      run_streaming_cmd!("docker", [
+        "cp",
+        "#{container_id}:#{@prebuilt_root}/zImage",
+        Path.join(prebuilt_out, "zImage")
+      ])
+
+      run_streaming_cmd!("docker", [
+        "cp",
+        "#{container_id}:#{@prebuilt_root}/kernel.dtb",
+        Path.join(prebuilt_out, "kernel.dtb")
+      ])
+
+      run_streaming_cmd!("docker", [
+        "cp",
+        "#{container_id}:#{@prebuilt_root}/userdata.img",
+        Path.join(prebuilt_out, "userdata.img")
+      ])
+
       board_config_prebuilt = Path.join(prebuilt_out, "BoardConfig.mk")
 
       run_streaming_cmd!("docker", [

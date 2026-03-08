@@ -1,0 +1,22 @@
+diff --git a/sysdrv/source/uboot/u-boot/include/configs/evb_rv1106.h b/sysdrv/source/uboot/u-boot/include/configs/evb_rv1106.h
+index 347f84ec..8891a74d 100644
+--- a/sysdrv/source/uboot/u-boot/include/configs/evb_rv1106.h
++++ b/sysdrv/source/uboot/u-boot/include/configs/evb_rv1106.h
+@@ -9,7 +9,7 @@
+ 
+ #include <configs/rv1106_common.h>
+ 
+-#define CONFIG_SYS_MMC_ENV_DEV 0
++#define CONFIG_SYS_MMC_ENV_DEV 1
+ 
+ #define ROCKCHIP_DEVICE_SETTINGS \
+ 			"stdout=serial,vidconsole\0" \
+@@ -33,7 +33,7 @@
+ #ifdef CONFIG_SPL_KERNEL_BOOT
+ #define CONFIG_BOOTCOMMAND "reset"
+ #else
+-#define CONFIG_BOOTCOMMAND RKIMG_BOOTCOMMAND
++#define CONFIG_BOOTCOMMAND "sysboot mmc 1:4 any ${scriptaddr} /extlinux/extlinux.conf"
+ #endif
+ 
+ #endif /* !CONFIG_SPL_BUILD */

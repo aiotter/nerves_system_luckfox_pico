@@ -3,9 +3,6 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
 
   @shortdoc "Generates .nerves/fwup.conf from BoardConfig.mk"
 
-  @rootfs_count_blk 256 * 1024 * 2
-  @app_count_blk 512 * 1024 * 2
-
   @impl Mix.Task
   def run(_args) do
     root = File.cwd!()
@@ -30,6 +27,8 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
     idblock_part = get_partition!(parts, "idblock")
     uboot_part = get_partition!(parts, "uboot")
     boot_part = get_partition!(parts, "boot")
+    oem_part = get_partition!(parts, "oem")
+    userdata_part = get_partition!(parts, "userdata")
     rootfs_part = get_partition!(parts, "rootfs")
 
     env_offset_blk = kib_to_blk(elem(env_part, 0))
@@ -38,22 +37,40 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
     uboot_offset_blk = kib_to_blk(elem(uboot_part, 0))
     boot_offset_blk = kib_to_blk(elem(boot_part, 0))
     boot_count_blk = kib_to_blk(elem(boot_part, 1))
+    oem_offset_blk = kib_to_blk(elem(oem_part, 0))
+    oem_count_blk = kib_to_blk(elem(oem_part, 1))
+    userdata_offset_blk = kib_to_blk(elem(userdata_part, 0))
+    userdata_count_blk = kib_to_blk(elem(userdata_part, 1))
     rootfs_offset_blk = kib_to_blk(elem(rootfs_part, 0))
-    app_offset_blk = rootfs_offset_blk + @rootfs_count_blk
+    rootfs_count_blk = kib_to_blk(elem(rootfs_part, 1))
+    boot_partnum = elem(boot_part, 2)
+    userdata_partnum = elem(userdata_part, 2)
+    rootfs_partnum = elem(rootfs_part, 2)
+    fw_devpath = "/dev/mmcblk1"
+    userdata_devpath = "/dev/mmcblk1p#{userdata_partnum}"
+    rootfs_devpath = "/dev/mmcblk1p#{rootfs_partnum}"
+    blkdevparts = "mmcblk1:#{partition_cmd}"
 
     assigns = [
       board_config_path: board_config_path,
       board_name: Path.basename(board_config_path, ".mk"),
+      fw_devpath: fw_devpath,
+      userdata_devpath: userdata_devpath,
+      rootfs_devpath: rootfs_devpath,
+      blkdevparts: blkdevparts,
       env_offset_blk: env_offset_blk,
       env_count_blk: env_count_blk,
       idblock_offset_blk: idblock_offset_blk,
       uboot_offset_blk: uboot_offset_blk,
       boot_offset_blk: boot_offset_blk,
       boot_count_blk: boot_count_blk,
+      boot_partnum: boot_partnum,
+      oem_offset_blk: oem_offset_blk,
+      oem_count_blk: oem_count_blk,
+      userdata_offset_blk: userdata_offset_blk,
+      userdata_count_blk: userdata_count_blk,
       rootfs_offset_blk: rootfs_offset_blk,
-      rootfs_count_blk: @rootfs_count_blk,
-      app_offset_blk: app_offset_blk,
-      app_count_blk: @app_count_blk
+      rootfs_count_blk: rootfs_count_blk
     ]
 
     rendered = EEx.eval_file(template_path, assigns)
@@ -64,7 +81,7 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
   defp parse_partition_cmd!(partition_cmd) do
     partition_cmd
     |> String.split(",", trim: true)
-    |> Enum.reduce({%{}, 0}, fn entry, {acc, cursor_kib} ->
+    |> Enum.reduce({%{}, 0, 1}, fn entry, {acc, cursor_kib, partnum} ->
       case Regex.run(~r/^([^()]+)\(([^)]+)\)$/, String.trim(entry), capture: :all_but_first) do
         [definition, name] ->
           definition = String.trim(definition)
@@ -79,7 +96,8 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
                 {to_kib!(size), cursor_kib}
             end
 
-          {Map.put(acc, name, {offset_kib, size_kib}), offset_kib + size_kib}
+          {Map.put(acc, name, {offset_kib, size_kib, partnum}), offset_kib + size_kib,
+           partnum + 1}
 
         _ ->
           Mix.raise("Failed to parse partition entry: #{entry}")
@@ -119,10 +137,12 @@ defmodule Mix.Tasks.LuckfoxPico.GenerateFwupConf do
 
   defp strip_shell_quotes(value) do
     cond do
-      String.length(value) >= 2 and String.starts_with?(value, "\"") and String.ends_with?(value, "\"") ->
+      String.length(value) >= 2 and String.starts_with?(value, "\"") and
+          String.ends_with?(value, "\"") ->
         String.slice(value, 1..-2//1)
 
-      String.length(value) >= 2 and String.starts_with?(value, "'") and String.ends_with?(value, "'") ->
+      String.length(value) >= 2 and String.starts_with?(value, "'") and
+          String.ends_with?(value, "'") ->
         String.slice(value, 1..-2//1)
 
       true ->
