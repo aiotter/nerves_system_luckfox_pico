@@ -1,16 +1,16 @@
-defmodule NervesSystemLuckfoxPico.MixProject do
+defmodule NervesSystemLuckfoxPicoMini.MixProject do
   use Mix.Project
 
-  @github_organization "aiotter"
-  @app :nerves_system_luckfox_pico_mini
-  @source_url "https://github.com/#{@github_organization}/#{@app}"
+  @github_user :aiotter
+  @github_repo :nerves_system_luckfox_pico
+  @source_url "https://github.com/#{@github_user}/#{@github_repo}"
   @version Path.join(__DIR__, "VERSION")
            |> File.read!()
            |> String.trim()
 
   def project do
     [
-      app: @app,
+      app: :nerves_system_luckfox_pico_mini,
       version: @version,
       elixir: "~> 1.17",
       compilers: Mix.compilers() ++ [:luckfox_pico, :nerves_package],
@@ -45,7 +45,7 @@ defmodule NervesSystemLuckfoxPico.MixProject do
     [
       type: :system,
       artifact_sites: [
-        {:github_releases, "#{@github_organization}/#{@app}"}
+        {:github_releases, "#{@github_user}/#{@github_repo}"}
       ],
       build_runner: Nerves.Artifact.BuildRunners.Docker,
       build_runner_opts: build_runner_opts(),
