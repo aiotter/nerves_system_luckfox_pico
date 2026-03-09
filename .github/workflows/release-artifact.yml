@@ -63,6 +63,9 @@ jobs:
           set -euo pipefail
           chmod -R a+rwX "$MIX_DEPS_PATH" "$MIX_BUILD_PATH" "$NERVES_DL_DIR"
 
+      - name: Create artifact output directory
+        run: mkdir -p artifacts
+
       - name: Build Nerves artifact
         run: devbox run -- mix nerves.artifact --path artifacts
 
