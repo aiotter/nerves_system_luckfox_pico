@@ -19,6 +19,8 @@ jobs:
     timeout-minutes: 90
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      MIX_DEPS_PATH: ${{ github.workspace }}/deps
+      MIX_BUILD_PATH: ${{ github.workspace }}/_build
       NERVES_DL_DIR: ${{ github.workspace }}/.nerves/dl
 
     steps:
@@ -48,7 +50,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p "$MIX_DEPS_PATH" "$MIX_BUILD_PATH"
           mkdir -p "$NERVES_DL_DIR"
+          chmod -R a+rwX "$MIX_DEPS_PATH" "$MIX_BUILD_PATH"
           chmod -R a+rwX "$NERVES_DL_DIR"
 
       - name: Fetch dependencies
