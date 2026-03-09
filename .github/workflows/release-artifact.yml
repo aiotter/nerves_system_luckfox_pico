@@ -46,17 +46,22 @@ jobs:
       - name: Ensure SSH directory exists for Docker bind mount
         run: mkdir -p ~/.ssh
 
-      - name: Ensure NERVES download directory is writable in Docker
+      - name: Prepare writable directories
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p "$MIX_DEPS_PATH" "$MIX_BUILD_PATH"
           mkdir -p "$NERVES_DL_DIR"
-          chmod -R a+rwX "$MIX_DEPS_PATH" "$MIX_BUILD_PATH"
           chmod -R a+rwX "$NERVES_DL_DIR"
 
       - name: Fetch dependencies
         run: devbox run -- mix deps.get
+
+      - name: Ensure dependency paths are writable for Docker
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod -R a+rwX "$MIX_DEPS_PATH" "$MIX_BUILD_PATH" "$NERVES_DL_DIR"
 
       - name: Build Nerves artifact
         run: devbox run -- mix nerves.artifact --path artifacts
