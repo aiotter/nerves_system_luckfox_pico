@@ -19,6 +19,7 @@ jobs:
     timeout-minutes: 90
     env:
       RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+      NERVES_DL_DIR: ${{ github.workspace }}/.nerves/dl
 
     steps:
       - name: Checkout
@@ -42,6 +43,13 @@ jobs:
 
       - name: Ensure SSH directory exists for Docker bind mount
         run: mkdir -p ~/.ssh
+
+      - name: Ensure NERVES download directory is writable in Docker
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$NERVES_DL_DIR"
+          chmod -R a+rwX "$NERVES_DL_DIR"
 
       - name: Fetch dependencies
         run: devbox run -- mix deps.get
