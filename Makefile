@@ -17,11 +17,7 @@ $(PREBUILT_ARCHIVE): VERSION $(wildcard docker/*)
 	@test -n "$(LUCKFOX_SDK_GIT_REF)" || { echo "LUCKFOX_SDK_GIT_REF is required"; exit 1; }
 	mkdir -p "$(dir $@)"
 	@set -eu; \
-	board="$(LUCKFOX_BOARD)"; \
-	image_tag="nerves_system_luckfox_pico-$${board,,}:$$(cat VERSION)-$(LUCKFOX_SDK_GIT_REF)"; \
-	docker build --platform "linux/amd64" --file docker/Dockerfile --tag "$$image_tag" \
+	docker buildx build --platform "linux/amd64" --file docker/Dockerfile \
 	  --build-arg "LUCKFOX_BOARD=$(LUCKFOX_BOARD)" \
-	  --build-arg "LUCKFOX_SDK_GIT_REF=$(LUCKFOX_SDK_GIT_REF)" .; \
-	container_id="$$(docker create --platform "linux/amd64" "$$image_tag")"; \
-	trap 'docker rm -f "$$container_id" >/dev/null 2>&1 || true' EXIT INT TERM; \
-	docker cp "$$container_id:/out.tar" "$@"
+	  --build-arg "LUCKFOX_SDK_GIT_REF=$(LUCKFOX_SDK_GIT_REF)" \
+	  --output "type=tar,dest=$@" .

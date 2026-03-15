@@ -1,4 +1,4 @@
-FROM luckfoxtech/luckfox_pico:1.0
+FROM luckfoxtech/luckfox_pico:1.0 AS builder
 
 ARG LUCKFOX_SDK_GIT_URL=https://github.com/LuckfoxTECH/luckfox-pico.git
 ARG LUCKFOX_SDK_GIT_REF
@@ -89,6 +89,7 @@ RUN bash -eux <<'EOF'
   cp "$KERNEL_DTB_SRC" /out/kernel.dtb
   cp output/image/userdata.img /out/userdata.img
   cp .BoardConfig.mk /out/BoardConfig.mk
-  tar -C /out -cf /out.tar \
-    idblock.img uboot.img zImage kernel.dtb userdata.img BoardConfig.mk
 EOF
+
+FROM scratch
+COPY --from=builder /out /
